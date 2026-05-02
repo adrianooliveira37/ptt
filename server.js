@@ -1,35 +1,5 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const http = require('http');
-const https = require('https');
-const { Server } = require('socket.io');
-const { ExpressPeerServer } = require('peer');
-const cors = require('cors');
-
 const app = express();
-const certDir = path.join(__dirname, 'certs');
-const certKeyPath = path.join(certDir, 'localhost.key');
-const certCertPath = path.join(certDir, 'localhost.crt');
-let server;
-let serverProtocol = 'http';
-
-// Para rede local, usar HTTP é mais simples
-// Para produção remota, descomentar a lógica HTTPS abaixo
-const forceHttp = true;
-
-if (!forceHttp && fs.existsSync(certKeyPath) && fs.existsSync(certCertPath)) {
-  const httpsOptions = {
-    key: fs.readFileSync(certKeyPath),
-    cert: fs.readFileSync(certCertPath),
-  };
-  server = https.createServer(httpsOptions, app);
-  serverProtocol = 'https';
-  console.log('Usando HTTPS local com certificados em certs/');
-} else {
-  server = http.createServer(app);
-  console.log('Certificados HTTPS não encontrados ou desativados. Usando HTTP local.');
-}
+const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -106,6 +76,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend rodando em ${serverProtocol}://0.0.0.0:${PORT}`);
+  console.log(`Backend rodando na porta ${PORT}`);
+});
   console.log(`Acesse via IP local em ${serverProtocol}://192.168.88.57:${PORT}`);
 });
