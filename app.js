@@ -6,7 +6,7 @@ let streamLocal;
 let chamadaAtiva;
 let onlinePeers = new Set();
 
-// URL do backend no Render
+// Configurado com a URL do Render em HTTPS
 const backendUrl = 'https://radioptt.onrender.com';
 const backendUrlObj = new URL(backendUrl);
 const savedPeerId = localStorage.getItem('pttPeerId');
@@ -24,6 +24,10 @@ const audioRecebido = document.getElementById('audio-recebido');
 const searchInput = document.getElementById('search-contatos');
 const onlineCount = document.getElementById('online-count');
 
+// Elementos da sessão de Pop-up (Modal)
+const sessaoFalar = document.getElementById('sessao-falar');
+const btnVoltarLista = document.getElementById('btn-voltar-lista');
+
 // Ativa o modo de segundo plano no Android assim que o dispositivo estiver pronto
 document.addEventListener('deviceready', () => {
   if (window.cordova && window.cordova.plugins && window.cordova.plugins.backgroundMode) {
@@ -34,6 +38,15 @@ document.addEventListener('deviceready', () => {
 }, false);
 
 const socket = io(backendUrl);
+
+function abrirPopUp() {
+  sessaoFalar.classList.add('ativa');
+}
+
+function fecharPopUp() {
+  sessaoFalar.classList.remove('ativa');
+  finalizarChamada();
+}
 
 function atualizaStatus(texto, cor = '#28a745') {
   statusConexao.innerText = texto;
@@ -159,8 +172,7 @@ async function removerContato(id) {
     if (contatoSelecionado && contatoSelecionado.id === id) {
       contatoSelecionado = null;
       contatoSelecionadoText.innerText = '';
-      btnPtt.style.display = 'none';
-      atualizaStatus('Status: Aguardando contato', '#ffffff');
+      fecharPopUp();
     }
   } catch (err) {
     console.error(err);
@@ -171,7 +183,7 @@ async function removerContato(id) {
 function selecionarContato(contact) {
   contatoSelecionado = contact;
   contatoSelecionadoText.innerText = `Contato selecionado: ${contact.name}`;
-  btnPtt.style.display = 'flex';
+  abrirPopUp();
 }
 
 function copiarMeuId() {
@@ -219,14 +231,22 @@ peer.on('error', (err) => {
 peer.on('call', (call) => {
   chamadaAtiva = call;
   call.answer(streamLocal || null);
-  selecionarContato({ name: `Contato ${call.peer}`, id: call.peer });
-  atualizaStatus(`Chamada recebida de ${call.peer}`, '#ffc107');
+
+  const contatoExistente = contacts.find((c) => c.id === call.peer);
+  const nomeContato = contatoExistente ? contatoExistente.name : `Contato ${call.peer}`;
+
+  selecionarContato({ name: nomeContato, id: call.peer });
+  atualizaStatus(`Chamada recebida de ${nomeContato}`, '#ffc107');
 
   call.on('stream', (remoteStream) => {
     audioRecebido.srcObject = remoteStream;
   });
 
-  call.on('close', finalizarChamada);
+  call.on('close', () => {
+    finalizarChamada();
+    fecharPopUp();
+  });
+  
   call.on('error', (err) => {
     console.error('Erro na chamada recebida:', err);
     atualizaStatus('Erro na chamada', '#dc3545');
@@ -248,7 +268,6 @@ function iniciarChamada(contact) {
   }
 
   streamLocal.getAudioTracks()[0].enabled = false;
-  contatoSelecionado = contact;
   selecionarContato(contact);
   atualizaStatus(`Ligando para ${contact.name}...`, '#17a2b8');
 
@@ -256,7 +275,10 @@ function iniciarChamada(contact) {
   chamadaAtiva.on('stream', (remoteStream) => {
     audioRecebido.srcObject = remoteStream;
   });
-  chamadaAtiva.on('close', finalizarChamada);
+  chamadaAtiva.on('close', () => {
+    finalizarChamada();
+    fecharPopUp();
+  });
   chamadaAtiva.on('error', (err) => {
     console.error('Erro na chamada:', err);
     atualizaStatus('Erro na chamada', '#dc3545');
@@ -265,6 +287,7 @@ function iniciarChamada(contact) {
 
 function finalizarChamada() {
   if (chamadaAtiva) {
+    chamadaAtiva.close();
     chamadaAtiva = null;
   }
   if (streamLocal) {
@@ -322,9 +345,7 @@ listaContatos.addEventListener('click', (event) => {
   const target = event.target;
   const id = target.dataset.id;
 
-  if (!id) {
-    return;
-  }
+  if (!id) return;
 
   if (target.classList.contains('btn-chamar')) {
     const contact = contacts.find((item) => item.id === id);
@@ -345,6 +366,8 @@ btnPtt.addEventListener('touchstart', (e) => {
   iniciarTransmissao();
 });
 btnPtt.addEventListener('touchend', pararTransmissao);
+
+btnVoltarLista.addEventListener('click', fecharPopUp);
 
 socket.on('connect', () => {
   console.log('Conectado ao backend.');
