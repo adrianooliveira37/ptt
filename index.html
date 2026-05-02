@@ -14,19 +14,28 @@
     .tiny-btn { display: inline-block; width: auto; padding: 6px 12px; font-size: 14px; margin-left: 10px; vertical-align: middle; }
     .form-row { display: grid; gap: 10px; }
     .lista-contatos { list-style: none; padding: 0; margin: 10px 0 0; }
-    .lista-contatos li { background: #272727; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .lista-contatos li { background: #272727; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; }
     .lista-contatos .info { text-align: left; flex: 1; }
     .lista-contatos button { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     .contact-status { display: block; margin-top: 4px; font-size: 13px; }
     .search-row { margin-top: 18px; }
     .search-row input { background: #252525; }
-    #btn-ptt { background: #dc3545; height: 100px; border-radius: 50%; width: 100px; margin: 20px auto; display: none; align-items: center; justify-content: center; cursor: pointer; user-select: none; transition: transform 0.1s ease, background 0.2s ease; }
+    
+    /* Botão PTT */
+    #btn-ptt { background: #dc3545; height: 100px; border-radius: 50%; width: 100px; margin: 20px auto; display: none; align-items: center; justify-content: center; cursor: pointer; user-select: none; transition: transform 0.1s ease, background 0.2s ease; font-weight: bold; }
     #btn-ptt.active { background: #a71d2a; transform: scale(0.98); }
     #btn-ptt:active { transform: scale(0.92); }
+    
     .status { color: #28a745; font-weight: bold; }
     .status-warning { color: #ffc107; }
     .status-error { color: #dc3545; }
     .empty-text { color: #999; font-size: 14px; margin: 10px 0; }
+
+    /* Estilos para controle de Sessões */
+    .sessao { display: none; }
+    .sessao.ativa { display: block; }
+    .btn-voltar { background: #444; margin-top: 15px; }
+
     @media (max-width: 520px) {
       .container { padding: 18px; }
       #btn-ptt { width: 90px; height: 90px; }
@@ -43,31 +52,65 @@
 
     <hr>
 
-    <h3>Contatos</h3>
-    <div class="form-row">
-      <input type="text" id="nome-contato" placeholder="Nome do contato">
-      <input type="text" id="id-contato" placeholder="ID do contato (oculto)">
-      <button id="btn-add-contact">Cadastrar contato</button>
+    <div id="sessao-selecao" class="sessao ativa">
+      <h3>Contatos</h3>
+      <div class="form-row">
+        <input type="text" id="nome-contato" placeholder="Nome do contato">
+        <input type="text" id="id-contato" placeholder="ID do contato (oculto)">
+        <button id="btn-add-contact">Cadastrar contato</button>
+      </div>
+      
+      <div class="search-row">
+        <input type="text" id="search-contatos" placeholder="Pesquisar contatos...">
+      </div>
+      
+      <p id="online-status" class="empty-text">Online: <span id="online-count">0</span></p>
+
+      <ul id="lista-contatos" class="lista-contatos"></ul>
     </div>
-    <div class="search-row">
-      <input type="text" id="search-contatos" placeholder="Pesquisar contatos...">
+
+    <div id="sessao-falar" class="sessao">
+      <p id="status-conexao" class="status">Status: Aguardando contato</p>
+      <p id="contato-selecionado" class="empty-text"></p>
+
+      <div id="btn-ptt">PTT</div>
+
+      <button id="btn-voltar-lista" class="btn-voltar">⬅ Voltar aos Contatos</button>
     </div>
-    <p id="online-status" class="empty-text">Online: <span id="online-count">0</span></p>
-
-    <ul id="lista-contatos" class="lista-contatos"></ul>
-
-    <hr>
-
-    <p id="status-conexao" class="status">Status: Aguardando contato</p>
-    <p id="contato-selecionado" class="empty-text"></p>
-
-    <div id="btn-ptt">PTT</div>
 
     <audio id="audio-recebido" autoplay></audio>
   </div>
 
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  
   <script src="app.js"></script>
+
+  <script>
+    const sessaoSelecao = document.getElementById('sessao-selecao');
+    const sessaoFalar = document.getElementById('sessao-falar');
+    const btnVoltar = document.getElementById('btn-voltar-lista');
+
+    // Função para exibir a sessão de conversa e esconder a lista
+    function abrirSessaoFalar() {
+      sessaoSelecao.classList.remove('ativa');
+      sessaoFalar.classList.add('ativa');
+      document.getElementById('btn-ptt').style.display = 'flex'; // Exibe o botão PTT
+    }
+
+    // Função para voltar para a lista de contatos
+    function voltarParaLista() {
+      sessaoFalar.classList.remove('ativa');
+      sessaoSelecao.classList.add('ativa');
+      document.getElementById('btn-ptt').style.display = 'none'; // Esconde o botão PTT
+    }
+
+    // Evento do botão voltar
+    btnVoltar.addEventListener('click', voltarParaLista);
+
+    // Como o seu app.js cria os contatos dinamicamente, você só precisará 
+    // chamar a função abrirSessaoFalar() no app.js quando o usuário clicar em um contato.
+    window.abrirSessaoFalar = abrirSessaoFalar;
+  </script>
 </body>
 </html>
