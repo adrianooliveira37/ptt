@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PTT Web - Contatos</title>
+  <title>PTT Web - Rádio</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #121212; color: white; padding: 20px; }
     .container { max-width: 520px; margin: 0 auto; background: #1e1e1e; padding: 24px; border-radius: 14px; box-shadow: 0px 6px 18px rgba(0,0,0,0.6); }
@@ -11,112 +11,75 @@
     input { background: #333; color: white; }
     button { background: #007bff; color: white; cursor: pointer; font-weight: bold; }
     button:active { background: #0056b3; }
-    .tiny-btn { display: inline-block; width: auto; padding: 6px 12px; font-size: 14px; margin-left: 10px; vertical-align: middle; }
-    .form-row { display: grid; gap: 10px; }
-    .lista-contatos { list-style: none; padding: 0; margin: 10px 0 0; }
-    .lista-contatos li { background: #272727; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .tiny-btn { display: inline-block; width: auto; padding: 6px 12px; font-size: 14px; margin-left: 10px; }
+    
+    .lista-contatos { list-style: none; padding: 0; margin: 15px 0 0; }
+    .lista-contatos li { background: #272727; padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .lista-contatos .info { text-align: left; flex: 1; }
-    .lista-contatos button { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
-    .contact-status { display: block; margin-top: 4px; font-size: 13px; }
-    .search-row { margin-top: 18px; }
-    .search-row input { background: #252525; }
+    .lista-contatos button { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; background: #28a745; }
+    .lista-contatos button:active { background: #1e7e34; }
     
     .status { color: #28a745; font-weight: bold; }
-    .status-warning { color: #ffc107; }
-    .status-error { color: #dc3545; }
     .empty-text { color: #999; font-size: 14px; margin: 10px 0; }
 
-    /* --- ESTILOS DO POP-UP MODAL (Sessão Falar) --- */
+    /* --- POP-UP MODAL --- */
     .modal-overlay {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(4px);
       z-index: 1000;
-      align-items: center;
-      justify-content: center;
+      align-items: center; justify-content: center;
     }
-    .modal-overlay.ativa {
-      display: flex;
-    }
+    .modal-overlay.ativa { display: flex; }
     .modal-content {
-      background: #1e1e1e;
-      width: 90%;
-      max-width: 400px;
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0px 10px 30px rgba(0,0,0,0.8);
-      border: 1px solid #333;
-      animation: zoomIn 0.2s ease-out;
+      background: #1e1e1e; width: 90%; max-width: 400px; padding: 30px;
+      border-radius: 20px; box-shadow: 0px 10px 30px rgba(0,0,0,0.8);
+      border: 1px solid #333; animation: zoomIn 0.2s ease-out;
     }
     @keyframes zoomIn {
       from { transform: scale(0.8); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
     }
 
-    /* Botão PTT gigante no Pop-up */
     #btn-ptt { 
-      background: #dc3545; 
-      height: 120px; 
-      border-radius: 50%; 
-      width: 120px; 
-      margin: 25px auto; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      cursor: pointer; 
-      user-select: none; 
-      transition: transform 0.1s ease, background 0.2s ease; 
-      font-weight: bold;
-      font-size: 18px;
-      box-shadow: 0 0 15px rgba(220, 53, 69, 0.4);
+      background: #dc3545; height: 120px; border-radius: 50%; width: 120px; 
+      margin: 25px auto; display: flex; align-items: center; justify-content: center; 
+      cursor: pointer; user-select: none; transition: transform 0.1s ease, background 0.2s ease; 
+      font-weight: bold; font-size: 18px; box-shadow: 0 0 15px rgba(220, 53, 69, 0.4);
     }
-    #btn-ptt.active { background: #a71d2a; transform: scale(0.96); box-shadow: 0 0 5px rgba(220, 53, 69, 0.2); }
+    #btn-ptt.active { background: #a71d2a; transform: scale(0.96); }
     #btn-ptt:active { transform: scale(0.92); }
 
     .btn-voltar { background: #444; margin-top: 15px; }
     .btn-voltar:hover { background: #555; }
-
-    @media (max-width: 520px) {
-      .container { padding: 18px; }
-      #btn-ptt { width: 110px; height: 110px; }
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>📻 Rádio PTT Web</h2>
-    <p>
-      Seu ID: <span id="meu-id" class="status">Carregando...</span>
-      <button id="btn-copiar-id" class="tiny-btn">Copiar</button>
+    
+    <div id="identificacao">
+      <input type="text" id="meu-nome-input" placeholder="Digite seu nome (Ex: Portaria, Suporte)">
+      <button id="btn-salvar-nome">Salvar meu Nome</button>
+    </div>
+
+    <p style="font-size: 14px; color: #aaa;">
+      Identificado como: <strong id="meu-nome-display" class="status">Nenhum</strong>
     </p>
 
     <hr>
 
     <div id="sessao-selecao">
-      <h3>Contatos</h3>
-      <div class="form-row">
-        <input type="text" id="nome-contato" placeholder="Nome do contato">
-        <input type="text" id="id-contato" placeholder="ID do contato (oculto)">
-        <button id="btn-add-contact">Cadastrar contato</button>
-      </div>
-      
-      <div class="search-row">
-        <input type="text" id="search-contatos" placeholder="Pesquisar contatos...">
-      </div>
-      
-      <p id="online-status" class="empty-text">Online: <span id="online-count">0</span></p>
-
+      <h3>Dispositivos Online</h3>
+      <p id="online-status" class="empty-text">Total online: <span id="online-count">0</span></p>
       <ul id="lista-contatos" class="lista-contatos"></ul>
     </div>
 
     <div id="sessao-falar" class="modal-overlay">
       <div class="modal-content">
-        <p id="status-conexao" class="status">Status: Aguardando contato</p>
+        <p id="status-conexao" class="status">Status: Aguardando</p>
         <p id="contato-selecionado" class="empty-text"></p>
 
         <div id="btn-ptt">PTT</div>
