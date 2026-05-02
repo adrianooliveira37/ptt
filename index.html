@@ -14,31 +14,76 @@
     .tiny-btn { display: inline-block; width: auto; padding: 6px 12px; font-size: 14px; margin-left: 10px; vertical-align: middle; }
     .form-row { display: grid; gap: 10px; }
     .lista-contatos { list-style: none; padding: 0; margin: 10px 0 0; }
-    .lista-contatos li { background: #272727; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; }
+    .lista-contatos li { background: #272727; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .lista-contatos .info { text-align: left; flex: 1; }
     .lista-contatos button { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     .contact-status { display: block; margin-top: 4px; font-size: 13px; }
     .search-row { margin-top: 18px; }
     .search-row input { background: #252525; }
     
-    /* Botão PTT */
-    #btn-ptt { background: #dc3545; height: 100px; border-radius: 50%; width: 100px; margin: 20px auto; display: none; align-items: center; justify-content: center; cursor: pointer; user-select: none; transition: transform 0.1s ease, background 0.2s ease; font-weight: bold; }
-    #btn-ptt.active { background: #a71d2a; transform: scale(0.98); }
-    #btn-ptt:active { transform: scale(0.92); }
-    
     .status { color: #28a745; font-weight: bold; }
     .status-warning { color: #ffc107; }
     .status-error { color: #dc3545; }
     .empty-text { color: #999; font-size: 14px; margin: 10px 0; }
 
-    /* Estilos para controle de Sessões */
-    .sessao { display: none; }
-    .sessao.ativa { display: block; }
+    /* --- ESTILOS DO POP-UP MODAL (Sessão Falar) --- */
+    .modal-overlay {
+      display: none; /* Escondido por padrão */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.ativa {
+      display: flex; /* Exibe centralizado */
+    }
+    .modal-content {
+      background: #1e1e1e;
+      width: 90%;
+      max-width: 400px;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0px 10px 30px rgba(0,0,0,0.8);
+      border: 1px solid #333;
+      animation: zoomIn 0.2s ease-out;
+    }
+    @keyframes zoomIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Botão PTT gigante no Pop-up */
+    #btn-ptt { 
+      background: #dc3545; 
+      height: 120px; 
+      border-radius: 50%; 
+      width: 120px; 
+      margin: 25px auto; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      cursor: pointer; 
+      user-select: none; 
+      transition: transform 0.1s ease, background 0.2s ease; 
+      font-weight: bold;
+      font-size: 18px;
+      box-shadow: 0 0 15px rgba(220, 53, 69, 0.4);
+    }
+    #btn-ptt.active { background: #a71d2a; transform: scale(0.96); box-shadow: 0 0 5px rgba(220, 53, 69, 0.2); }
+    #btn-ptt:active { transform: scale(0.92); }
+
     .btn-voltar { background: #444; margin-top: 15px; }
+    .btn-voltar:hover { background: #555; }
 
     @media (max-width: 520px) {
       .container { padding: 18px; }
-      #btn-ptt { width: 90px; height: 90px; }
+      #btn-ptt { width: 110px; height: 110px; }
     }
   </style>
 </head>
@@ -52,11 +97,11 @@
 
     <hr>
 
-    <div id="sessao-selecao" class="sessao ativa">
+    <div id="sessao-selecao">
       <h3>Contatos</h3>
       <div class="form-row">
         <input type="text" id="nome-contato" placeholder="Nome do contato">
-        <input type="text" id="id-contato" placeholder="ID do contato (oculto)">
+        <input type="text" id="id-contato" placeholder="ID do contato">
         <button id="btn-add-contact">Cadastrar contato</button>
       </div>
       
@@ -69,13 +114,15 @@
       <ul id="lista-contatos" class="lista-contatos"></ul>
     </div>
 
-    <div id="sessao-falar" class="sessao">
-      <p id="status-conexao" class="status">Status: Aguardando contato</p>
-      <p id="contato-selecionado" class="empty-text"></p>
+    <div id="sessao-falar" class="modal-overlay">
+      <div class="modal-content">
+        <p id="status-conexao" class="status">Status: Aguardando contato</p>
+        <p id="contato-selecionado" class="empty-text"></p>
 
-      <div id="btn-ptt">PTT</div>
+        <div id="btn-ptt">PTT</div>
 
-      <button id="btn-voltar-lista" class="btn-voltar">⬅ Voltar aos Contatos</button>
+        <button id="btn-voltar-lista" class="btn-voltar">⬅ Fechar / Voltar</button>
+      </div>
     </div>
 
     <audio id="audio-recebido" autoplay></audio>
@@ -83,34 +130,6 @@
 
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  
   <script src="app.js"></script>
-
-  <script>
-    const sessaoSelecao = document.getElementById('sessao-selecao');
-    const sessaoFalar = document.getElementById('sessao-falar');
-    const btnVoltar = document.getElementById('btn-voltar-lista');
-
-    // Função para exibir a sessão de conversa e esconder a lista
-    function abrirSessaoFalar() {
-      sessaoSelecao.classList.remove('ativa');
-      sessaoFalar.classList.add('ativa');
-      document.getElementById('btn-ptt').style.display = 'flex'; // Exibe o botão PTT
-    }
-
-    // Função para voltar para a lista de contatos
-    function voltarParaLista() {
-      sessaoFalar.classList.remove('ativa');
-      sessaoSelecao.classList.add('ativa');
-      document.getElementById('btn-ptt').style.display = 'none'; // Esconde o botão PTT
-    }
-
-    // Evento do botão voltar
-    btnVoltar.addEventListener('click', voltarParaLista);
-
-    // Como o seu app.js cria os contatos dinamicamente, você só precisará 
-    // chamar a função abrirSessaoFalar() no app.js quando o usuário clicar em um contato.
-    window.abrirSessaoFalar = abrirSessaoFalar;
-  </script>
 </body>
 </html>
