@@ -28,20 +28,20 @@
 
     /* --- ESTILOS DO POP-UP MODAL (Sessão Falar) --- */
     .modal-overlay {
-      display: none; /* Escondido por padrão */
+      display: none;
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(4px);
       z-index: 1000;
       align-items: center;
       justify-content: center;
     }
     .modal-overlay.ativa {
-      display: flex; /* Exibe centralizado */
+      display: flex;
     }
     .modal-content {
       background: #1e1e1e;
@@ -101,7 +101,7 @@
       <h3>Contatos</h3>
       <div class="form-row">
         <input type="text" id="nome-contato" placeholder="Nome do contato">
-        <input type="text" id="id-contato" placeholder="ID do contato">
+        <input type="text" id="id-contato" placeholder="ID do contato (oculto)">
         <button id="btn-add-contact">Cadastrar contato</button>
       </div>
       
