@@ -6,8 +6,8 @@ let streamLocal;
 let chamadaAtiva;
 let onlinePeers = new Set();
 
-// IP fixo do seu computador na rede local
-const backendUrl = 'http://192.168.88.57:3000';
+// URL do backend no Render
+const backendUrl = 'https://radioptt.onrender.com';
 const backendUrlObj = new URL(backendUrl);
 const savedPeerId = localStorage.getItem('pttPeerId');
 
@@ -186,12 +186,12 @@ function copiarMeuId() {
     });
 }
 
-// Configuração ajustada para rodar em HTTP local
+// Configuração ajustada para o Render (HTTPS)
 const peerConfig = {
   host: backendUrlObj.hostname,
-  port: backendUrlObj.port ? Number(backendUrlObj.port) : 80,
+  port: 443,
   path: '/peerjs',
-  secure: false,
+  secure: true,
   key: 'peerjs',
   debug: 3,
 };
