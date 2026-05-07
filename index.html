@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Radio PTT - Teste</title>
+  <title>Radio PTT</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
-    body { font-family: Arial; margin: 20px; background: #111; color: #0f0; }
-    input, button { padding: 10px; margin: 5px; }
-    button { background: #0f0; color: black; font-weight: bold; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #111; color: #0f0; }
+    input, button { padding: 12px; margin: 8px 0; width: 100%; max-width: 400px; }
+    button { background: #0f0; color: black; font-weight: bold; border: none; cursor: pointer; }
+    .call-btn { background: #f00; color: white; padding: 18px; font-size: 20px; }
     .online { color: lime; }
-    .call-btn { background: red; color: white; padding: 15px; font-size: 18px; }
   </style>
 </head>
 <body>
-  <h1>🚀 Radio PTT - Teste</h1>
+  <h1>🚀 Radio PTT</h1>
 
   <div id="loginScreen">
     <h2>Login</h2>
-    <input id="userId" placeholder="User ID (ex: admin)" value="admin"><br>
+    <input id="userId" placeholder="User ID" value="admin"><br>
     <input id="password" type="password" placeholder="Senha" value="123456"><br><br>
     <button onclick="login()">Entrar</button>
   </div>
@@ -29,25 +29,25 @@
     <button onclick="logout()">Sair</button>
 
     <h3>Adicionar Contato</h3>
-    <input id="contactName" placeholder="Nome do contato">
-    <input id="contactId" placeholder="ID do usuário">
-    <button onclick="addContact()">Adicionar</button>
+    <input id="contactName" placeholder="Nome">
+    <input id="contactId" placeholder="ID do usuário (ex: user1)">
+    <button onclick="addContact()">Adicionar Contato</button>
 
-    <h3>Contatos</h3>
+    <h3>Meus Contatos</h3>
     <ul id="contactsList"></ul>
 
-    <h3>Online agora</h3>
-    <ul id="onlineList"></ul>
+    <h3>Online: <span id="onlineCount">0</span></h3>
   </div>
 
   <script>
-    let socket, peer, myToken, myUserId, currentCall = null;
+    const BASE_URL = 'https://ptt-1-zfyj.onrender.com';
+    let socket, peer, myToken, myUserId;
 
     async function login() {
       const userId = document.getElementById('userId').value;
       const password = document.getElementById('password').value;
 
-      const res = await fetch('http://192.168.88.57:3000/login', {
+      const res = await fetch(`${BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, password })
@@ -55,7 +55,7 @@
 
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Erro no login');
+        alert(data.error || 'Erro ao fazer login');
         return;
       }
 
@@ -71,43 +71,32 @@
     }
 
     function initSocket() {
-      socket = io('http://192.168.88.57:3000');
-
-      socket.on('connect', () => {
-        console.log('Socket conectado');
-      });
+      socket = io(BASE_URL);
 
       socket.on('presence', (onlinePeers) => {
-        updateOnlineList(onlinePeers);
+        document.getElementById('onlineCount').textContent = onlinePeers.length;
       });
-
-      socket.on('auth_error', (msg) => alert(msg));
     }
 
     function initPeer() {
       peer = new Peer(undefined, {
-        host: '192.168.88.57',
-        port: 3000,
+        host: 'ptt-1-zfyj.onrender.com',
+        port: 443,           // HTTPS
         path: '/peerjs',
-        debug: 3
+        secure: true,
+        debug: 2
       });
 
       peer.on('open', (id) => {
-        console.log('Meu Peer ID:', id);
+        console.log('✅ Peer ID:', id);
         socket.emit('register', { peerId: id, token: myToken });
       });
 
-      peer.on('call', (call) => {
-        if (confirm('Chamada recebida! Atender?')) {
-          call.answer(); // Aqui você pode passar stream se quiser áudio bidirecional
-          currentCall = call;
-          handleCall(call);
-        }
-      });
+      peer.on('error', (err) => console.error('Peer error:', err));
     }
 
     async function loadContacts() {
-      const res = await fetch(`http://192.168.88.57:3000/contacts?ownerId=${myUserId}`, {
+      const res = await fetch(`${BASE_URL}/contacts`, {
         headers: { Authorization: `Bearer ${myToken}` }
       });
       const contacts = await res.json();
@@ -117,26 +106,21 @@
     function renderContacts(contacts) {
       const list = document.getElementById('contactsList');
       list.innerHTML = '';
-      contacts.forEach(contact => {
+      contacts.forEach(c => {
         const li = document.createElement('li');
-        li.innerHTML = `
-          ${contact.name} (${contact.id})
-          <button class="call-btn" onclick="startCall('${contact.id}')">PTT</button>
-        `;
+        li.innerHTML = `${c.name} (${c.id}) 
+          <button class="call-btn" onclick="startCall('${c.id}')">PTT</button>`;
         list.appendChild(li);
       });
-    }
-
-    function updateOnlineList(onlinePeers) {
-      // Por enquanto só mostra quantos estão online
-      document.getElementById('onlineList').innerHTML = `<li class="online">${onlinePeers.length} usuários online</li>`;
     }
 
     async function addContact() {
       const name = document.getElementById('contactName').value;
       const id = document.getElementById('contactId').value;
 
-      await fetch('http://192.168.88.57:3000/contacts', {
+      if (!name || !id) return alert("Preencha nome e ID");
+
+      await fetch(`${BASE_URL}/contacts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,10 +132,8 @@
       loadContacts();
     }
 
-    function startCall(targetPeerId) {
-      // Aqui vamos simplificar: só envia áudio enquanto o botão estiver pressionado (PTT)
-      alert(`Iniciando chamada PTT para ${targetPeerId}\n\n(Ainda simplificado)`);
-      // Vamos melhorar essa parte na próxima versão
+    function startCall(targetId) {
+      alert(`Tentando PTT para ${targetId}...\n\n(Ainda vamos implementar o áudio real na próxima etapa)`);
     }
 
     function logout() {
