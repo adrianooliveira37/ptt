@@ -8,76 +8,53 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #111; color: #0f0; text-align: center; }
-    h1 { color: #0f0; }
-    button { padding: 15px 30px; margin: 10px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
+    button { padding: 12px 20px; margin: 8px; font-size: 16px; border-radius: 8px; cursor: pointer; }
     .ptt-btn {
-      background: red;
+      background: #ff0000;
       color: white;
-      font-size: 24px;
-      padding: 30px 60px;
+      font-size: 26px;
+      padding: 40px;
       border-radius: 50%;
-      width: 200px;
-      height: 200px;
+      width: 220px;
+      height: 220px;
+      margin: 30px auto;
+      display: block;
     }
-    .ptt-btn:active { background: darkred; transform: scale(0.95); }
-    .status { margin: 15px; font-size: 18px; }
+    .ptt-btn:active { background: #aa0000; transform: scale(0.95); }
+    li { margin: 15px 0; font-size: 18px; }
   </style>
 </head>
 <body>
   <h1>🚀 Radio PTT</h1>
 
-  <div id="loginScreen">
-    <h2>Login</h2>
-    <input id="userId" placeholder="User ID" value="admin"><br><br>
-    <input id="password" type="password" placeholder="Senha" value="123456"><br><br>
-    <button onclick="login()">Entrar</button>
-  </div>
-
-  <div id="mainScreen" style="display:none;">
+  <div id="mainScreen">
     <h2>Bem-vindo, <span id="userName"></span></h2>
-    
-    <div class="status" id="status">Status: Conectado</div>
+    <p id="status" style="color:yellow;">Status: Conectando...</p>
 
     <h3>Adicionar Contato</h3>
-    <input id="contactName" placeholder="Nome do contato">
-    <input id="contactId" placeholder="ID do usuário">
+    <input id="contactName" placeholder="Nome" style="width:200px">
+    <input id="contactId" placeholder="ID (ex: adriano)" style="width:200px">
     <button onclick="addContact()">Adicionar</button>
 
     <h3>Meus Contatos</h3>
-    <ul id="contactsList"></ul>
+    <ul id="contactsList" style="list-style:none; padding:0;"></ul>
 
     <h3>Online: <span id="onlineCount">0</span></h3>
   </div>
 
   <script>
     const BASE_URL = 'https://ptt-1-zfyj.onrender.com';
-    let socket, peer, myToken, myUserId, myPeerId;
-    let currentCall = null;
-    let localStream = null;
-    let isTalking = false;
+    let socket, peer, myToken, myUserId, myPeerId, localStream = null;
 
-    async function login() {
-      const userId = document.getElementById('userId').value;
-      const password = document.getElementById('password').value;
-
-      const res = await fetch(`${BASE_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, password })
-      });
-
-      const data = await res.json();
-      if (!data.success) return alert(data.error || 'Erro no login');
-
-      myToken = data.token;
-      myUserId = userId;
-      document.getElementById('userName').textContent = data.user.name;
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('mainScreen').style.display = 'block';
+    // Pega o token e userId do login (vamos simplificar)
+    async function initApp() {
+      // Tenta pegar dados do login (você pode melhorar depois)
+      myToken = "seu-token-aqui"; // temporário
+      myUserId = document.getElementById('userName').textContent || "admin";
 
       initSocket();
-      initPeer();
-      loadContacts();
+      await initPeer();
+      await loadContacts();
     }
 
     function initSocket() {
@@ -92,113 +69,74 @@
         host: 'ptt-1-zfyj.onrender.com',
         port: 443,
         path: '/peerjs',
-        secure: true,
-        debug: 2
+        secure: true
       });
 
       peer.on('open', (id) => {
         myPeerId = id;
-        console.log('✅ Meu Peer ID:', id);
+        console.log('✅ Peer ID:', id);
         socket.emit('register', { peerId: id, token: myToken });
+        document.getElementById('status').textContent = '✅ Conectado - Peer OK';
       });
 
       peer.on('call', async (call) => {
-        if (!localStream) {
-          localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        }
+        if (!localStream) localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         call.answer(localStream);
-        handleCall(call);
+        handleRemoteStream(call);
       });
-
-      peer.on('error', (err) => console.error('Peer Error:', err));
     }
 
-    async function startCall(contactId) {
-      if (!myPeerId) return alert("Aguardando conexão Peer...");
+    async function loadContacts() {
+      try {
+        const res = await fetch(`${BASE_URL}/contacts`, {
+          headers: { Authorization: `Bearer ${myToken}` }
+        });
+        const contacts = await res.json();
+
+        const list = document.getElementById('contactsList');
+        list.innerHTML = '';
+
+        contacts.forEach(contact => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            ${contact.name} <strong>(${contact.id})</strong><br>
+            <button onclick="startPTT('${contact.id}')" style="background:#0066ff; color:white;">
+              🎤 Pressionar para Falar
+            </button>
+          `;
+          list.appendChild(li);
+        });
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById('status').innerHTML = 'Erro ao carregar contatos';
+      }
+    }
+
+    async function startPTT(contactId) {
+      document.getElementById('status').textContent = `Chamando ${contactId}...`;
 
       try {
         if (!localStream) {
           localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log("✅ Microfone liberado");
         }
 
-        const call = peer.call(contactId, localStream);  // Aqui usamos o Peer ID do contato
-        handleCall(call);
-        document.getElementById('status').textContent = `Chamando ${contactId}...`;
+        const call = peer.call(contactId, localStream);
+        handleRemoteStream(call);
+
       } catch (err) {
         console.error(err);
-        alert("Erro ao acessar microfone");
+        alert("Não foi possível acessar o microfone. Verifique as permissões.");
       }
     }
 
-    function handleCall(call) {
-      currentCall = call;
+    function handleRemoteStream(call) {
       call.on('stream', (remoteStream) => {
         const audio = new Audio();
         audio.srcObject = remoteStream;
         audio.play();
-        document.getElementById('status').textContent = '🔊 Escutando...';
-      });
-
-      call.on('close', () => {
-        document.getElementById('status').textContent = 'Chamada encerrada';
-      });
-    }
-
-    // ==================== PTT (Pressionar para falar) ====================
-    async function setupPTT(contactId) {
-      const pttBtn = document.createElement('button');
-      pttBtn.className = 'ptt-btn';
-      pttBtn.textContent = 'PRESSIONE PARA FALAR';
-      pttBtn.style.marginTop = '30px';
-
-      // Pressionar
-      pttBtn.addEventListener('mousedown', async () => {
-        if (isTalking) return;
-        isTalking = true;
-
-        if (!localStream) {
-          localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        }
-        document.getElementById('status').textContent = '🗣️ Falando...';
-      });
-
-      // Soltar
-      pttBtn.addEventListener('mouseup', () => {
-        isTalking = false;
-        document.getElementById('status').textContent = '🔊 Escutando...';
-      });
-
-      // Suporte para mobile
-      pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); });
-      pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); });
-
-      document.getElementById('mainScreen').appendChild(pttBtn);
-    }
-
-    // ==================== CONTATOS ====================
-    async function loadContacts() {
-      const res = await fetch(`${BASE_URL}/contacts`, {
-        headers: { Authorization: `Bearer ${myToken}` }
-      });
-      const contacts = await res.json();
-      renderContacts(contacts);
-    }
-
-    function renderContacts(contacts) {
-      const list = document.getElementById('contactsList');
-      list.innerHTML = '';
-
-      contacts.forEach(contact => {
-        const li = document.createElement('li');
-        li.style.margin = '10px 0';
-        li.innerHTML = `
-          ${contact.name} (${contact.id})
-          <button onclick="startCall('${contact.id}'); setupPTT('${contact.id}')" 
-                  style="background:#0066ff; color:white; margin-left:10px;">
-            Falar
-          </button>
-        `;
-        list.appendChild(li);
+        document.getElementById('status').textContent = '🔊 Escutando áudio...';
       });
     }
 
@@ -206,7 +144,7 @@
       const name = document.getElementById('contactName').value;
       const id = document.getElementById('contactId').value;
 
-      if (!name || !id) return alert("Preencha todos os campos");
+      if (!name || !id) return alert("Preencha nome e ID");
 
       await fetch(`${BASE_URL}/contacts`, {
         method: 'POST',
@@ -220,9 +158,8 @@
       loadContacts();
     }
 
-    function logout() {
-      location.reload();
-    }
+    // Inicia tudo quando carregar a página
+    window.onload = initApp;
   </script>
 </body>
 </html>
