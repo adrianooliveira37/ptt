@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 // ====================== USUÁRIOS (em memória) ======================
 const users = new Map();
 users.set('admin', { name: 'Administrador', password: '123456' });
-users.set('user1', { name: 'João', password: '123' });
+users.set('user1', { name: 'adriano', password: '123' });
 users.set('user2', { name: 'Maria', password: '123' });
 
 // ====================== TOKENS ======================
