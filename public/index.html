@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora IP - Relatório Técnico</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    @media print {
+      body * { visibility: hidden; }
+      #relatorio-impressao, #relatorio-impressao * { visibility: visible; }
+      #relatorio-impressao { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  <div class="max-w-5xl mx-auto p-6">
+    
+    <!-- Header -->
+    <div class="text-center mb-8 no-print">
+      <h1 class="text-4xl font-bold mb-2 text-blue-500">📷 Calculadora de Câmeras IP</h1>
+      <p class="text-gray-400">Sistema de Recomendação para Técnicos em Campo</p>
+    </div>
+
+    <!-- Formulário -->
+    <div class="bg-gray-900 rounded-2xl p-8 shadow-xl no-print">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium mb-2">Total de Câmeras</label>
+          <input id="cameras" type="number" value="14" min="1" class="w-full bg-gray-800 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Upload Disponível (Mbps)</label>
+          <input id="upload" type="number" value="50" min="1" class="w-full bg-gray-800 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Codec</label>
+          <select id="codec" class="w-full bg-gray-800 rounded-lg px-4 py-3">
+            <option value="H.264" selected>H.264</option>
+            <option value="H.265">H.265 (Mais econômico)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Qualidade Desejada</label>
+          <select id="qualidade" class="w-full bg-gray-800 rounded-lg px-4 py-3">
+            <option value="512">Econômica - 512 Kbps</option>
+            <option value="1024" selected>Padrão - 1024 Kbps (Recomendado)</option>
+            <option value="1536">Boa - 1536 Kbps</option>
+            <option value="2048">Ótima - 2048 Kbps</option>
+            <option value="3072">Excelente - 3072 Kbps</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Limite de Consumo do Upload</label>
+          <div class="flex items-center gap-4">
+            <input type="range" id="limiteConsumo" min="10" max="90" value="30" step="5" class="flex-1 h-2 bg-gray-700 rounded-lg cursor-pointer">
+            <div class="bg-gray-800 rounded-lg px-3 py-1 min-w-[60px] text-center">
+              <span id="limiteValue" class="text-xl font-bold text-yellow-400">30</span><span class="text-sm">%</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">FPS (Opcional)</label>
+          <select id="fps" class="w-full bg-gray-800 rounded-lg px-4 py-3">
+            <option value="8">8 fps (Economia)</option>
+            <option value="10" selected>10 fps (Padrão)</option>
+            <option value="15">15 fps (Bom)</option>
+            <option value="20">20 fps (Ótimo)</option>
+            <option value="30">30 fps (Máximo)</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="gerarRelatorio()" 
+              class="mt-8 w-full bg-blue-600 hover:bg-blue-700 transition py-4 rounded-xl text-xl font-semibold flex items-center justify-center gap-2">
+        <i class="fas fa-file-alt"></i> Gerar Relatório Técnico
+      </button>
+    </div>
+
+    <!-- Relatório -->
+    <div id="relatorio-container" class="mt-8"></div>
+    <div id="relatorio-impressao" class="hidden"></div>
+  </div>
+
+  <script>
+    function gerarRelatorio() {
+      const cameras = parseInt(document.getElementById('cameras').value) || 1;
+      const upload = parseInt(document.getElementById('upload').value) || 10;
+      const codec = document.getElementById('codec').value;
+      const qualidadeKbps = parseInt(document.getElementById('qualidade').value);
+      const limiteConsumo = parseInt(document.getElementById('limiteConsumo').value);
+      const fps = parseInt(document.getElementById('fps').value);
+
+      let bitrate = qualidadeKbps;
+      let subBitrate = Math.round(bitrate * 0.4);
+
+      if (codec === 'H.265') {
+        bitrate = Math.round(bitrate * 0.6);
+        subBitrate = Math.round(subBitrate * 0.35);
+      }
+
+      const fatorFPS = fps / 10;
+      bitrate = Math.round(bitrate * fatorFPS);
+      subBitrate = Math.round(subBitrate * fatorFPS);
+
+      const mainMbps = (bitrate * cameras) / 1000;
+      const subMbps = (subBitrate * cameras) / 1000;
+      const totalMbps = mainMbps + subMbps;
+      const limiteMbps = upload * (limiteConsumo / 100);
+      const usoPercent = (totalMbps / upload) * 100;
+      const viavel = totalMbps <= limiteMbps;
+
+      const iframe = Math.min(200, Math.max(50, fps * 15));
+      const resolucao = bitrate < 800 ? "720P (1280×720)" : bitrate >= 3000 ? "4K (3840×2160)" : "1080P (1920×1080)";
+
+      const diarioGB = (mainMbps * 86400) / 8 / 1024;
+      const mensalGB = diarioGB * 30;
+
+      const htmlRelatorio = `
+        <div class="bg-white text-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+          <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
+            <h1 class="text-2xl font-bold">📷 RELATÓRIO TÉCNICO - CÂMERAS IP</h1>
+            <p class="text-blue-100">Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+          </div>
+          <div class="p-6">
+            <div class="${viavel ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'} border p-4 rounded-lg mb-6">
+              <h2 class="text-xl font-bold ${viavel ? 'text-green-700' : 'text-red-700'}">
+                ${viavel ? '✅ CONFIGURAÇÃO VIÁVEL' : '❌ CONFIGURAÇÃO NÃO RECOMENDADA'}
+              </h2>
+            </div>
+
+            <div class="bg-gray-100 p-5 rounded-lg mb-6">
+              <h2 class="font-bold text-lg mb-4">Configuração Recomendada por Câmera</h2>
+              <table class="w-full">
+                <tr class="border-b"><td class="py-2 font-semibold">Codec</td><td>${codec}</td></tr>
+                <tr class="border-b"><td class="py-2 font-semibold">Resolução</td><td>${resolucao}</td></tr>
+                <tr class="border-b"><td class="py-2 font-semibold">FPS</td><td>${fps} fps</td></tr>
+                <tr class="border-b"><td class="py-2 font-semibold">I-Frame</td><td>${iframe}</td></tr>
+                <tr><td class="py-2 font-semibold">Bitrate</td><td><strong>${bitrate} Kbps</strong> (Main) + <strong>${subBitrate} Kbps</strong> (Sub)</td></tr>
+              </table>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-blue-50 p-5 rounded-lg">
+                <h3 class="font-bold mb-3">Consumo de Upload</h3>
+                <p><strong>${mainMbps.toFixed(2)} Mbps</strong> MainStream</p>
+                <p><strong>${subMbps.toFixed(2)} Mbps</strong> SubStream</p>
+                <p class="text-lg font-bold mt-3">Total: ${totalMbps.toFixed(2)} Mbps</p>
+              </div>
+              <div class="bg-purple-50 p-5 rounded-lg">
+                <h3 class="font-bold mb-3">Rede</h3>
+                <p>Upload: <strong>${upload} Mbps</strong></p>
+                <p>Limite: <strong>${limiteMbps.toFixed(1)} Mbps</strong> (${limiteConsumo}%)</p>
+                <p class="${usoPercent > limiteConsumo ? 'text-red-600' : 'text-green-600'} font-bold">Uso: ${usoPercent.toFixed(1)}%</p>
+              </div>
+            </div>
+
+            <div class="mt-6 bg-gray-100 p-5 rounded-lg">
+              <h3 class="font-bold mb-2">Armazenamento Estimado (24/7)</h3>
+              <p>Diário: <strong>${diarioGB.toFixed(1)} GB</strong></p>
+              <p>30 dias: <strong>${mensalGB.toFixed(0)} GB</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-center gap-4 mt-8 no-print">
+          <button onclick="imprimirRelatorio()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold">
+            🖨️ Imprimir
+          </button>
+          <button onclick="baixarRelatorio()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold">
+            📥 Baixar HTML
+          </button>
+        </div>
+      `;
+
+      document.getElementById('relatorio-container').innerHTML = htmlRelatorio;
+      document.getElementById('relatorio-impressao').innerHTML = htmlRelatorio.replace(/no-print/g, '');
+    }
+
+    function imprimirRelatorio() {
+      const conteudo = document.getElementById('relatorio-impressao').innerHTML;
+      const win = window.open('', '_blank');
+      win.document.write(`
+        <!DOCTYPE html>
+        <html><head>
+          <meta charset="UTF-8">
+          <title>Relatório Técnico</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>body { padding: 30px; font-family: system-ui; }</style>
+        </head><body>${conteudo}</body></html>
+      `);
+      win.document.close();
+      setTimeout(() => win.print(), 600);
+    }
+
+    function baixarRelatorio() {
+      const conteudo = document.getElementById('relatorio-impressao').innerHTML;
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Técnico</title><script src="https://cdn.tailwindcss.com"></script><style>body{padding:30px;}</style></head><body>${conteudo}</body></html>`;
+      
+      const blob = new Blob([html], { type: 'text/html' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `relatorio_cameras_${new Date().toISOString().slice(0,10)}.html`;
+      link.click();
+    }
+
+    // Atualiza o slider em tempo real
+    document.getElementById('limiteConsumo').addEventListener('input', function() {
+      document.getElementById('limiteValue').textContent = this.value;
+    });
+
+    // Gera relatório ao carregar a página
+    window.onload = gerarRelatorio;
+  </script>
+</body>
+</html>
