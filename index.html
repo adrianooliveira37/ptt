@@ -3,96 +3,160 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PTT Web - Rádio</title>
+  <title>Radio PTT - Teste</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #121212; color: white; padding: 20px; }
-    .container { max-width: 520px; margin: 0 auto; background: #1e1e1e; padding: 24px; border-radius: 14px; box-shadow: 0px 6px 18px rgba(0,0,0,0.6); }
-    input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; box-sizing: border-box; }
-    input { background: #333; color: white; }
-    button { background: #007bff; color: white; cursor: pointer; font-weight: bold; }
-    button:active { background: #0056b3; }
-    .tiny-btn { display: inline-block; width: auto; padding: 6px 12px; font-size: 14px; margin-left: 10px; }
-    
-    .lista-contatos { list-style: none; padding: 0; margin: 15px 0 0; }
-    .lista-contatos li { background: #272727; padding: 14px; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .lista-contatos .info { text-align: left; flex: 1; }
-    .lista-contatos button { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; background: #28a745; }
-    .lista-contatos button:active { background: #1e7e34; }
-    
-    .status { color: #28a745; font-weight: bold; }
-    .empty-text { color: #999; font-size: 14px; margin: 10px 0; }
-
-    /* --- POP-UP MODAL --- */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      align-items: center; justify-content: center;
-    }
-    .modal-overlay.ativa { display: flex; }
-    .modal-content {
-      background: #1e1e1e; width: 90%; max-width: 400px; padding: 30px;
-      border-radius: 20px; box-shadow: 0px 10px 30px rgba(0,0,0,0.8);
-      border: 1px solid #333; animation: zoomIn 0.2s ease-out;
-    }
-    @keyframes zoomIn {
-      from { transform: scale(0.8); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    #btn-ptt { 
-      background: #dc3545; height: 120px; border-radius: 50%; width: 120px; 
-      margin: 25px auto; display: flex; align-items: center; justify-content: center; 
-      cursor: pointer; user-select: none; transition: transform 0.1s ease, background 0.2s ease; 
-      font-weight: bold; font-size: 18px; box-shadow: 0 0 15px rgba(220, 53, 69, 0.4);
-    }
-    #btn-ptt.active { background: #a71d2a; transform: scale(0.96); }
-    #btn-ptt:active { transform: scale(0.92); }
-
-    .btn-voltar { background: #444; margin-top: 15px; }
-    .btn-voltar:hover { background: #555; }
+    body { font-family: Arial; margin: 20px; background: #111; color: #0f0; }
+    input, button { padding: 10px; margin: 5px; }
+    button { background: #0f0; color: black; font-weight: bold; }
+    .online { color: lime; }
+    .call-btn { background: red; color: white; padding: 15px; font-size: 18px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>📻 Rádio PTT Web</h2>
-    
-    <div id="identificacao">
-      <input type="text" id="meu-nome-input" placeholder="Digite seu nome (Ex: Portaria, Suporte)">
-      <button id="btn-salvar-nome">Salvar meu Nome</button>
-    </div>
+  <h1>🚀 Radio PTT - Teste</h1>
 
-    <p style="font-size: 14px; color: #aaa;">
-      Identificado como: <strong id="meu-nome-display" class="status">Nenhum</strong>
-    </p>
-
-    <hr>
-
-    <div id="sessao-selecao">
-      <h3>Dispositivos Online</h3>
-      <p id="online-status" class="empty-text">Total online: <span id="online-count">0</span></p>
-      <ul id="lista-contatos" class="lista-contatos"></ul>
-    </div>
-
-    <div id="sessao-falar" class="modal-overlay">
-      <div class="modal-content">
-        <p id="status-conexao" class="status">Status: Aguardando</p>
-        <p id="contato-selecionado" class="empty-text"></p>
-
-        <div id="btn-ptt">PTT</div>
-
-        <button id="btn-voltar-lista" class="btn-voltar">⬅ Fechar / Voltar</button>
-      </div>
-    </div>
-
-    <audio id="audio-recebido" autoplay></audio>
+  <div id="loginScreen">
+    <h2>Login</h2>
+    <input id="userId" placeholder="User ID (ex: admin)" value="admin"><br>
+    <input id="password" type="password" placeholder="Senha" value="123456"><br><br>
+    <button onclick="login()">Entrar</button>
   </div>
 
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="app.js"></script>
+  <div id="mainScreen" style="display:none;">
+    <h2>Bem-vindo, <span id="userName"></span></h2>
+    <button onclick="logout()">Sair</button>
+
+    <h3>Adicionar Contato</h3>
+    <input id="contactName" placeholder="Nome do contato">
+    <input id="contactId" placeholder="ID do usuário">
+    <button onclick="addContact()">Adicionar</button>
+
+    <h3>Contatos</h3>
+    <ul id="contactsList"></ul>
+
+    <h3>Online agora</h3>
+    <ul id="onlineList"></ul>
+  </div>
+
+  <script>
+    let socket, peer, myToken, myUserId, currentCall = null;
+
+    async function login() {
+      const userId = document.getElementById('userId').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('http://192.168.88.57:3000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, password })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || 'Erro no login');
+        return;
+      }
+
+      myToken = data.token;
+      myUserId = userId;
+      document.getElementById('userName').textContent = data.user.name;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainScreen').style.display = 'block';
+
+      initSocket();
+      initPeer();
+      loadContacts();
+    }
+
+    function initSocket() {
+      socket = io('http://192.168.88.57:3000');
+
+      socket.on('connect', () => {
+        console.log('Socket conectado');
+      });
+
+      socket.on('presence', (onlinePeers) => {
+        updateOnlineList(onlinePeers);
+      });
+
+      socket.on('auth_error', (msg) => alert(msg));
+    }
+
+    function initPeer() {
+      peer = new Peer(undefined, {
+        host: '192.168.88.57',
+        port: 3000,
+        path: '/peerjs',
+        debug: 3
+      });
+
+      peer.on('open', (id) => {
+        console.log('Meu Peer ID:', id);
+        socket.emit('register', { peerId: id, token: myToken });
+      });
+
+      peer.on('call', (call) => {
+        if (confirm('Chamada recebida! Atender?')) {
+          call.answer(); // Aqui você pode passar stream se quiser áudio bidirecional
+          currentCall = call;
+          handleCall(call);
+        }
+      });
+    }
+
+    async function loadContacts() {
+      const res = await fetch(`http://192.168.88.57:3000/contacts?ownerId=${myUserId}`, {
+        headers: { Authorization: `Bearer ${myToken}` }
+      });
+      const contacts = await res.json();
+      renderContacts(contacts);
+    }
+
+    function renderContacts(contacts) {
+      const list = document.getElementById('contactsList');
+      list.innerHTML = '';
+      contacts.forEach(contact => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          ${contact.name} (${contact.id})
+          <button class="call-btn" onclick="startCall('${contact.id}')">PTT</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function updateOnlineList(onlinePeers) {
+      // Por enquanto só mostra quantos estão online
+      document.getElementById('onlineList').innerHTML = `<li class="online">${onlinePeers.length} usuários online</li>`;
+    }
+
+    async function addContact() {
+      const name = document.getElementById('contactName').value;
+      const id = document.getElementById('contactId').value;
+
+      await fetch('http://192.168.88.57:3000/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${myToken}`
+        },
+        body: JSON.stringify({ name, id })
+      });
+
+      loadContacts();
+    }
+
+    function startCall(targetPeerId) {
+      // Aqui vamos simplificar: só envia áudio enquanto o botão estiver pressionado (PTT)
+      alert(`Iniciando chamada PTT para ${targetPeerId}\n\n(Ainda simplificado)`);
+      // Vamos melhorar essa parte na próxima versão
+    }
+
+    function logout() {
+      location.reload();
+    }
+  </script>
 </body>
 </html>
