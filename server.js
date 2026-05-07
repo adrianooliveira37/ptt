@@ -2,33 +2,36 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { ExpressPeerServer } = require('peer');
+const cors = require('cors');   // ← Importante!
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
 
+// Socket.io
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+// PeerJS
 const peerServer = ExpressPeerServer(server, { debug: true });
 app.use('/peerjs', peerServer);
 
+app.use(cors());
 app.use(express.json());
-app.use(cors()); // Você precisa importar o cors: npm install cors
 
-// ====================== USUÁRIOS (em memória) ======================
-const users = new Map(); // id -> { name, password, peerId? }
-
+// ====================== USUÁRIOS ======================
+const users = new Map();
 users.set('admin', { name: 'Administrador', password: '123456' });
 users.set('user1', { name: 'João', password: '123' });
 users.set('user2', { name: 'Maria', password: '123' });
 
-// ====================== AUTENTICAÇÃO ======================
-const tokens = new Map(); // token -> userId
+// ====================== TOKENS ======================
+const tokens = new Map();
 
+// ====================== LOGIN ======================
 app.post('/login', (req, res) => {
   const { userId, password } = req.body;
-
-  if (!userId || !password) {
-    return res.status(400).json({ error: 'userId e password são obrigatórios' });
-  }
+  if (!userId || !password) return res.status(400).json({ error: 'userId e password obrigatórios' });
 
   const user = users.get(userId);
   if (!user || user.password !== password) {
@@ -38,18 +41,14 @@ app.post('/login', (req, res) => {
   const token = 'tok_' + Math.random().toString(36).substring(2, 15);
   tokens.set(token, userId);
 
-  res.json({
-    success: true,
-    token,
-    user: { id: userId, name: user.name }
-  });
+  res.json({ success: true, token, user: { id: userId, name: user.name } });
 });
 
 // Middleware de autenticação
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token || !tokens.has(token)) {
-    return res.status(401).json({ error: 'Token inválido ou não informado' });
+    return res.status(401).json({ error: 'Token inválido' });
   }
   req.userId = tokens.get(token);
   next();
@@ -63,15 +62,10 @@ app.get('/contacts', authenticate, (req, res) => {
 });
 
 app.post('/contacts', authenticate, (req, res) => {
-  const { name, id } = req.body; // id = userId do contato
+  const { name, id } = req.body;
+  if (!name || !id) return res.status(400).json({ error: 'name e id obrigatórios' });
 
-  if (!name || !id) {
-    return res.status(400).json({ error: 'name e id são obrigatórios' });
-  }
-
-  if (!users.has(id)) {
-    return res.status(404).json({ error: 'Usuário não existe' });
-  }
+  if (!users.has(id)) return res.status(404).json({ error: 'Usuário não existe' });
 
   const contacts = contactsByOwner[req.userId] || [];
   if (contacts.some(c => c.id === id)) {
@@ -83,18 +77,10 @@ app.post('/contacts', authenticate, (req, res) => {
   res.json(contacts);
 });
 
-app.delete('/contacts/:contactId', authenticate, (req, res) => {
-  const contacts = contactsByOwner[req.userId] || [];
-  contactsByOwner[req.userId] = contacts.filter(c => c.id !== req.params.contactId);
-  res.json(contactsByOwner[req.userId]);
-});
-
-// ====================== SOCKET.IO ======================
-const onlinePeers = new Map(); // peerId -> userId
+// ====================== SOCKET ======================
+const onlinePeers = new Map();
 
 io.on('connection', (socket) => {
-  console.log('Cliente conectado:', socket.id);
-
   socket.on('register', ({ peerId, token }) => {
     if (!token || !tokens.has(token)) {
       socket.emit('auth_error', 'Token inválido');
@@ -104,8 +90,8 @@ io.on('connection', (socket) => {
     const userId = tokens.get(token);
     socket.userId = userId;
     socket.peerId = peerId;
-
     onlinePeers.set(peerId, userId);
+
     io.emit('presence', Array.from(onlinePeers.keys()));
   });
 
@@ -117,8 +103,10 @@ io.on('connection', (socket) => {
   });
 });
 
+// ====================== START ======================
 const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Backend rodando na porta ${PORT}`);
-  console.log(`📱 Acesse: http://SEU_IP:${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🌐 URL: https://ptt-1-zfyj.onrender.com`);
 });
